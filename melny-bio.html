@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Melnyyy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050505;
+    --card-bg: #0d0d0d;
+    --card-bg-2: #141414;
+    --accent: #f2f2f2;
+    --accent-glow: rgba(255,255,255,0.55);
+    --text-main: #f4f4f4;
+    --text-muted: #8c8c8c;
+    --border-soft: rgba(255,255,255,0.08);
+    --badge-bg: rgba(255,255,255,0.06);
+    --badge-border: rgba(255,255,255,0.22);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background:#000;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Splash screen ---------- */
+  #splash{
+    position:fixed;
+    inset:0;
+    background: var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+    cursor:pointer;
+    overflow:hidden;
+    transition: opacity .5s ease;
+  }
+  #splash span{
+    position:relative;
+    z-index:1;
+    font-size:34px;
+    font-weight:800;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    background: linear-gradient(100deg, #ffffff 30%, #8a8a8a 45%, #ffffff 60%);
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 3.5s ease-in-out infinite;
+  }
+  @keyframes shine{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -100% 0; }
+  }
+  #splash.hidden{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* ---------- Animated dot background ---------- */
+  #bg-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    background: #050505;
+  }
+
+  /* ---------- App shell ---------- */
+  #app{
+    position:relative;
+    min-height:100vh;
+    z-index:1;
+    opacity:0;
+    transition: opacity .6s ease;
+    overflow-x:hidden;
+  }
+  #app.visible{ opacity:1; }
+
+  /* top scroll progress bar */
+  #progress{
+    position:fixed;
+    top:0; left:0;
+    height:2px;
+    width:0%;
+    background: linear-gradient(90deg, #ffffff, #9a9a9a);
+    z-index:60;
+    transition: width .1s linear;
+  }
+
+  /* ---------- controls (mute + volume) ---------- */
+  #controls{
+    position:fixed;
+    top:24px; left:24px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background: rgba(15,15,15,0.75);
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:8px 14px 8px 8px;
+    backdrop-filter: blur(6px);
+    z-index:50;
+  }
+  #mute-btn{
+    width:34px; height:34px;
+    border:1px solid rgba(255,255,255,0.5);
+    border-radius:8px;
+    background:transparent;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  #mute-btn svg{ width:16px; height:16px; }
+
+  #volume-slider{
+    -webkit-appearance:none;
+    appearance:none;
+    width:110px;
+    height:4px;
+    background: rgba(255,255,255,0.2);
+    border-radius:3px;
+    outline:none;
+    cursor:pointer;
+  }
+  #volume-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.6);
+    cursor:pointer;
+  }
+  #volume-slider::-moz-range-thumb{
+    width:14px; height:14px;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.6);
+    cursor:pointer;
+  }
+  #volume-value{
+    font-size:11px;
+    color: var(--text-muted);
+    width:26px;
+    text-align:right;
+    flex-shrink:0;
+  }
+
+  /* layout */
+  .layout{
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    gap:40px;
+    min-height:100vh;
+    padding: 80px 24px 80px 260px;
+  }
+
+  /* sidebar */
+  #sidebar{
+    position:fixed;
+    left:60px;
+    top:50%;
+    transform: translateY(-50%);
+    width:210px;
+    background: transparent;
+    border:none;
+    padding:0;
+    z-index:40;
+  }
+
+  .nav-list{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+
+  .nav-item{
+    position:relative;
+    display:flex;
+    align-items:center;
+    padding:18px 0 18px 20px;
+    color:#6e6e6e;
+    font-weight:500;
+    font-size:14px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    transition: color .25s ease;
+  }
+  .nav-item svg{ display:none; }
+  .nav-item:hover{ color:#c2c2c2; }
+  .nav-item.active{ color:#ffffff; font-weight:600; }
+  .nav-item.active::before{ height:60%; }
+  .nav-item::before{
+    content:"";
+    position:absolute;
+    left:0; top:50%;
+    transform: translateY(-50%);
+    width:2px; height:0;
+    background:#fff;
+    box-shadow: 0 0 8px 1px rgba(255,255,255,0.7);
+    border-radius:2px;
+    transition: height .25s ease;
+  }
+
+  /* colonna che contiene le due card (bio / staff) separate */
+  .content-col{
+    display:flex;
+    flex-direction:column;
+    gap:64px;
+    width:100%;
+    max-width:960px;
+  }
+
+  /* main card (ora sono due box distinti: bio-card e staff-card) */
+  .card-box{
+    width:100%;
+    background: var(--card-bg);
+    border:1px solid var(--border-soft);
+    border-radius:18px;
+    padding:48px 56px 64px 56px;
+  }
+
+  .panel-title{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+    color:#e8e8e8;
+  }
+  .panel-title svg{ width:17px; height:17px; }
+
+  /* Bio panel */
+  .avatar-wrap{
+    display:flex;
+    justify-content:center;
+    margin: 28px 0 22px 0;
+  }
+  .avatar{
+    width:120px; height:120px;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow: 0 0 22px 2px var(--accent-glow);
+    object-fit:cover;
+    background:#222;
+    filter:grayscale(1);
+  }
+
+  .name{
+    text-align:center;
+    font-family:'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size:56px;
+    font-weight:600;
+    color:#ffffff;
+    margin:0 0 18px 0;
+    letter-spacing:0.5px;
+    text-shadow:
+      0 0 10px rgba(255,255,255,0.5),
+      0 0 26px rgba(255,255,255,0.3),
+      0 12px 30px rgba(255,255,255,0.16);
+  }
+
+  .role-tag{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-family:'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-size:15px;
+    font-weight:500;
+    letter-spacing:0.4px;
+    color:#d8d8d8;
+    margin-bottom:22px;
+  }
+  .role-tag svg{ width:16px; height:16px; opacity:0.85; }
+
+  .info-line{
+    text-align:center;
+    font-size:15px;
+    line-height:2;
+    color:#e2e2e2;
+  }
+  .info-line b{
+    font-weight:700;
+    color:#ffffff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.35);
+  }
+
+  .quote-line{
+    text-align:center;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:2px;
+    color: rgba(255,255,255,0.55);
+    margin: 18px 0 4px 0;
+  }
+
+  .section-heading{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin: 46px 0 22px 0;
+    color:#dcdcdc;
+  }
+  .section-heading svg{ width:16px; height:16px; }
+
+  .tag-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    font-size:15px;
+    margin: 8px 0 18px 0;
+    color:#e8e8e8;
+  }
+  .tag-row svg{ width:17px; height:17px; }
+
+  .link-icon{
+    display:block;
+    margin:0 auto 10px auto;
+  }
+  svg.link-icon{
+    width:26px; height:26px;
+    color: rgba(255,255,255,0.92);
+  }
+  .item-card .link-handle{ margin-top:10px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:18px;
+  }
+
+  /* ---------- Item card: un solo box per elemento (no nesting) ---------- */
+  .item-card{
+    display:block;
+    position:relative;
+    text-decoration:none;
+    color:inherit;
+    background: var(--card-bg-2);
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:22px 18px;
+    text-align:center;
+    transition: border-color .3s ease, box-shadow .3s ease, transform .2s ease;
+  }
+  .item-card.copy-card{ cursor:pointer; }
+  .item-card.copy-card:focus-visible{
+    outline: 2px solid rgba(255,255,255,0.5);
+    outline-offset: 2px;
+  }
+  .item-card::after{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    border-radius:13px;
+    padding:1.5px;
+    background: conic-gradient(from var(--angle,-90deg), transparent 0%, rgba(255,255,255,0.5) 12%, rgba(255,255,255,0.18) 20%, transparent 32%, transparent 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity:0;
+    transition: opacity .4s ease;
+    pointer-events:none;
+    z-index:3;
+  }
+  .item-card:hover::after{
+    opacity:1;
+    animation: rotate-border 3.6s linear infinite;
+  }
+  @property --angle{
+    syntax: '<angle>';
+    initial-value: -90deg;
+    inherits: false;
+  }
+  @keyframes rotate-border{
+    from{ --angle:-90deg; }
+    to{ --angle:270deg; }
+  }
+  .item-card:hover{
+    border-color: rgba(255,255,255,0.4);
+    box-shadow: 0 0 14px 0 rgba(255,255,255,0.1);
+    transform: translateY(-2px);
+  }
+  .item-card h4{
+    margin:0 0 4px 0;
+    font-size:16px;
+    font-weight:700;
+    color:#fdfdfd;
+  }
+  .item-card .year{
+    color: var(--text-muted);
+    font-size:13px;
+    margin-bottom:12px;
+  }
+
+  .badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.4px;
+    color: var(--role-color, #d6d6d6);
+    background: color-mix(in srgb, var(--role-color, #ffffff) 15%, transparent);
+    border:1px solid color-mix(in srgb, var(--role-color, #ffffff) 45%, transparent);
+  }
+
+  @media (max-width: 900px){
+    .layout{ padding: 24px 16px 100px 16px; flex-direction:column; align-items:center; }
+    #sidebar{
+      position:static;
+      transform:none;
+      width:100%;
+      max-width:400px;
+      margin-bottom:20px;
+    }
+    .content-col{ gap:36px; }
+    .card-box{ padding:32px 20px 48px 20px; }
+    .grid{ grid-template-columns: 1fr; }
+    .name{ font-size:32px; }
+    #controls{ top:16px; left:16px; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="splash">
+    <span>Click Anywhere</span>
+  </div>
+
+  <audio id="bg-audio" loop>
+    <source src="song.mp3" type="audio/mpeg">
+    Il tuo browser non supporta l'elemento audio.
+  </audio>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div id="app">
+    <div id="progress"></div>
+
+    <div id="controls">
+      <button id="mute-btn" aria-label="Muta audio">
+        <svg id="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+        <svg id="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+      </button>
+      <input type="range" id="volume-slider" min="1" max="100" value="50">
+      <span id="volume-value">50</span>
+    </div>
+
+    <div class="layout">
+      <div id="sidebar">
+        <div class="nav-list">
+          <div class="nav-item active" data-target="bio-panel">
+            Bio
+          </div>
+          <div class="nav-item" data-target="staff-panel">
+            Staff Experience
+          </div>
+        </div>
+      </div>
+
+      <div class="content-col">
+
+        <!-- BOX BIO -->
+        <div class="card-box" id="bio-card">
+        <div class="panel" id="bio-panel">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Bio
+          </div>
+
+          <div class="avatar-wrap">
+            <!-- Sostituisci il src qui sotto con l'URL della tua immagine profilo -->
+            <img class="avatar" src="https://api.dicebear.com/7.x/shapes/svg?seed=melnyyy" alt="Avatar">
+          </div>
+
+          <h1 class="name">Melny</h1>
+
+          <div class="role-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Screensharer
+          </div>
+
+          <div class="info-line">
+            <div><b>Age:</b> 18 y/o</div>
+            <div><b>Place:</b> Italy (MI)</div>
+            <div><b>Language:</b> Italian</div>
+          </div>
+
+          <!-- Scrivi qui la tua frase tra le virgolette -->
+          <div class="quote-line">is my souls too dark for you?</div>
+
+          <div class="section-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            CURRENTLY
+          </div>
+
+          <div class="grid">
+            <a class="item-card" href="https://imgur.com/a/3l0QsPC" target="_blank" rel="noopener">
+              <h4>Zeta.ac</h4>
+              <div><span class="badge" style="--role-color:#991b1b;">HEADQUARTERS</span></div>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/4NQn7dK" target="_blank" rel="noopener">
+              <h4>FruitMC</h4>
+              <div><span class="badge" style="--role-color:#ef4444;">SR. ADMIN, STAFF MANAGER, HEAD OF SS</span></div>
+            </a>
+          </div>
+
+          <!--
+            LINKS: sostituisci href="#" con il link reale e il testo
+            dentro il badge con il tuo handle/username per ogni piattaforma.
+            Per aggiungere un'altra piattaforma copia un blocco <a class="item-card">...</a>,
+            cambia l'icona SVG, il nome e il colore --role-color con quello del brand.
+          -->
+          <div class="section-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            Links
+          </div>
+          <div class="grid">
+            <a class="item-card" href="https://www.youtube.com/@melny_" target="_blank" rel="noopener">
+              <svg class="link-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg>
+              <h4>YouTube</h4>
+              <div class="link-handle"><span class="badge" style="--role-color:#FF0000;">@melny_</span></div>
+            </a>
+            <div class="item-card copy-card" role="button" tabindex="0" onclick="copyHandle(this, 'melnyyy_')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyHandle(this,'melnyyy_');}">
+              <svg class="link-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.09-.32 13.68.099 18.21a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.075.075 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.891.076.076 0 0 0-.04.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.029 19.84 19.84 0 0 0 6.001-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.723-3.548-13.813a.062.062 0 0 0-.031-.028zM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.955 2.418-2.157 2.418zm7.974 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.946 2.418-2.157 2.418z"></path></svg>
+              <h4>Discord</h4>
+              <div class="link-handle"><span class="badge" style="--role-color:#5865F2;">melnyyy_</span></div>
+            </div>
+            <a class="item-card" href="https://namemc.com/profile/Melnyyy" target="_blank" rel="noopener">
+              <svg class="link-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0v24h24V0Zm4.8 4.8H16V8h3.2v11.2H16V8H8v11.2H4.8V8Z"></path></svg>
+              <h4>NameMC</h4>
+              <div class="link-handle"><span class="badge" style="--role-color:#4ADE80;">Melnyyy</span></div>
+            </a>
+            <div class="item-card copy-card" role="button" tabindex="0" onclick="copyHandle(this, '@melnyyy')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyHandle(this,'@melnyyy');}">
+              <svg class="link-icon" viewBox="0 0 448 512" fill="currentColor"><path d="M446.7 98.6l-67.6 318.8c-5.1 22.5-18.4 28.1-37.3 17.5l-103-75.9-49.7 47.8c-5.5 5.5-10.1 10.1-20.7 10.1l7.4-104.9 190.9-172.5c8.3-7.4-1.8-11.5-12.9-4.1L117.8 284 16.2 252.2c-22.1-6.9-22.5-22.1 4.6-32.7L418.2 66.4c18.4-6.9 34.5 4.1 28.5 32.2z"></path></svg>
+              <h4>Telegram</h4>
+              <div class="link-handle"><span class="badge" style="--role-color:#26A5E4;">@melnyyy</span></div>
+            </div>
+          </div>
+
+        </div>
+        </div>
+
+        <!-- BOX STAFF EXPERIENCE -->
+        <div class="card-box" id="staff-card">
+        <!-- STAFF EXPERIENCE PANEL -->
+        <div class="panel" id="staff-panel">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            Staff Experience
+          </div>
+
+          <!--
+            Ogni riga sotto è una card vuota già pronta.
+            Per aggiungerne una: copia un blocco <a class="item-card">...</a> e modifica:
+            - href="#"           -> il link a cui deve portare (es. link invito Discord, profilo, ecc.)
+            - <h4>...</h4>        -> nome del server / progetto
+            - .year               -> anno o periodo
+            - .badge              -> ruolo ricoperto
+          -->
+
+          <!--
+            Colori badge in base al ruolo:
+            - Solo "SS VERIFIED" (nessun altro rango) -> giallo #f0b429
+            - Helper -> verde #4ade80
+            - Mod -> blu chiaro #60a5fa | Mod+ -> blu medio #3b82f6 | SrMod -> blu scuro #1e40af
+            - Admin / Sr. Admin / SS Admin -> rosso #ef4444
+            - Owner / Headquarters -> rosso scuro #991b1b
+            - Screensharer -> giallo #f0b429
+            Le card senza proof non hanno href: cliccandoci sopra non succede nulla.
+          -->
+
+          <div class="tag-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z"></path><path d="M3 7 L12 12 L21 7"></path><path d="M12 12 L12 22"></path></svg>
+            Minecraft
+          </div>
+          <div class="grid">
+            <a class="item-card" href="https://imgur.com/a/3Omx2jT" target="_blank" rel="noopener">
+              <h4>AtlasMC</h4>
+              <div class="year">2023</div>
+              <span class="badge" style="--role-color:#ef4444;">ADMIN, STAFF MANAGER, HEAD OF SS</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/yy7Hlim" target="_blank" rel="noopener">
+              <h4>Lyzard</h4>
+              <div class="year">2024</div>
+              <span class="badge" style="--role-color:#60a5fa;">MOD, SS VERIFIED</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/8qwCTTd" target="_blank" rel="noopener">
+              <h4>AuraMC</h4>
+              <div class="year">2026</div>
+              <span class="badge" style="--role-color:#60a5fa;">MOD, HEAD OF SS</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/GKqxkJH" target="_blank" rel="noopener">
+              <h4>CoralMC</h4>
+              <div class="year">2026</div>
+              <span class="badge" style="--role-color:#4ade80;">HELPER, SS VERIFIED</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/4NQn7dK" target="_blank" rel="noopener">
+              <h4>FruitMC</h4>
+              <div class="year">2026</div>
+              <span class="badge" style="--role-color:#ef4444;">SR. ADMIN, STAFF MANAGER, HEAD OF SS</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/3l0QsPC" target="_blank" rel="noopener">
+              <h4>Zeta.ac</h4>
+              <div class="year">2026</div>
+              <span class="badge" style="--role-color:#991b1b;">HEADQUARTERS</span>
+            </a>
+          </div>
+
+          <div class="tag-row" style="margin-top:40px;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.09-.32 13.68.099 18.21a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.075.075 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.891.076.076 0 0 0-.04.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.029 19.84 19.84 0 0 0 6.001-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.723-3.548-13.813a.062.062 0 0 0-.031-.028zM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.955 2.418-2.157 2.418zm7.974 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.946 2.418-2.157 2.418z"/></svg>
+            Discord
+          </div>
+          <div class="grid">
+            <a class="item-card" href="https://imgur.com/a/iDsm5JO" target="_blank" rel="noopener">
+              <h4>SS King</h4>
+              <div class="year">2023</div>
+              <span class="badge" style="--role-color:#ef4444;">SS ADMIN</span>
+            </a>
+            <!-- Nessuna proof: niente href, cliccandoci sopra non succede nulla -->
+            <a class="item-card">
+              <h4>TierList Hub Italiana</h4>
+              <div class="year">2025</div>
+              <span class="badge" style="--role-color:#f0b429;">SS VERIFIED</span>
+            </a>
+            <a class="item-card">
+              <h4>TierList CoralMC</h4>
+              <div class="year">2025</div>
+              <span class="badge" style="--role-color:#f0b429;">SS VERIFIED</span>
+            </a>
+            <a class="item-card" href="https://imgur.com/a/f6vfI1S" target="_blank" rel="noopener">
+              <h4>RBWCM</h4>
+              <div class="year">2026</div>
+              <span class="badge" style="--role-color:#f0b429;">SCREENSHARER</span>
+            </a>
+          </div>
+        </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
+  const audio = document.getElementById('bg-audio');
+  const muteBtn = document.getElementById('mute-btn');
+  const iconUnmuted = document.getElementById('icon-unmuted');
+  const iconMuted = document.getElementById('icon-muted');
+  const progress = document.getElementById('progress');
+  const volumeSlider = document.getElementById('volume-slider');
+  const volumeValue = document.getElementById('volume-value');
+
+  audio.volume = volumeSlider.value / 100;
+
+  // copia il nome utente negli appunti (card Discord / Telegram)
+  function copyHandle(el, text){
+    const badge = el.querySelector('.badge');
+    const original = badge ? badge.textContent : '';
+    const showCopied = () => {
+      if (!badge) return;
+      badge.textContent = 'Copied!';
+      clearTimeout(el.__copyTimeout);
+      el.__copyTimeout = setTimeout(() => { badge.textContent = original; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(showCopied);
+    } else {
+      const tmp = document.createElement('textarea');
+      tmp.value = text;
+      tmp.style.position = 'fixed';
+      tmp.style.opacity = '0';
+      document.body.appendChild(tmp);
+      tmp.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(tmp);
+      showCopied();
+    }
+  }
+
+  splash.addEventListener('click', () => {
+    splash.classList.add('hidden');
+    app.classList.add('visible');
+    audio.play().catch(()=>{});
+    setTimeout(() => splash.remove(), 500);
+  }, { once:true });
+
+  muteBtn.addEventListener('click', () => {
+    audio.muted = !audio.muted;
+    iconUnmuted.style.display = audio.muted ? 'none' : 'block';
+    iconMuted.style.display = audio.muted ? 'block' : 'none';
+  });
+
+  volumeSlider.addEventListener('input', () => {
+    const val = volumeSlider.value;
+    audio.volume = val / 100;
+    volumeValue.textContent = val;
+    if (audio.muted && val > 0) {
+      audio.muted = false;
+      iconUnmuted.style.display = 'block';
+      iconMuted.style.display = 'none';
+    }
+  });
+
+  // navigazione: click -> evidenzia subito + scroll fluido alla sezione
+  const navItems = document.querySelectorAll('.nav-item');
+  const sections = document.querySelectorAll('.panel');
+  let suppressSpy = false;
+
+  function setActiveById(id){
+    navItems.forEach(i => i.classList.toggle('active', i.dataset.target === id));
+  }
+
+  function updateActiveSection(){
+    const refY = window.innerHeight * 0.35;
+    let activeId = sections[0] ? sections[0].id : null;
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= refY) {
+        activeId = sec.id;
+      }
+    });
+    if (activeId) setActiveById(activeId);
+  }
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = document.getElementById(item.dataset.target);
+      if (!target) return;
+
+      // accende subito la voce cliccata
+      setActiveById(item.dataset.target);
+
+      // evita che lo scrollspy sovrascriva lo stato durante lo scroll
+      suppressSpy = true;
+      target.scrollIntoView({ behavior:'smooth', block:'start' });
+      clearTimeout(window.__spyTimeout);
+      window.__spyTimeout = setTimeout(() => {
+        suppressSpy = false;
+        updateActiveSection();
+      }, 700);
+    });
+  });
+
+  window.addEventListener('scroll', () => {
+    if (suppressSpy) return;
+    window.requestAnimationFrame(updateActiveSection);
+  }, { passive:true });
+
+  updateActiveSection();
+
+  // scroll progress bar
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    progress.style.width = pct + '%';
+  });
+
+  // ---------- constellation background ----------
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, dots;
+  const LINK_DIST = 140;      // distanza massima per collegare due punti tra loro
+  const MOUSE_DIST = 180;     // distanza massima per collegare un punto al mouse
+  const mouse = { x: -9999, y: -9999, active: false };
+
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function initDots(){
+    const count = Math.floor((w * h) / 16000);
+    dots = Array.from({length: count}, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 1.4 + 0.6,
+      vx: (Math.random() - 0.5) * 0.12,
+      vy: (Math.random() - 0.5) * 0.12,
+      alpha: Math.random() * 0.5 + 0.25
+    }));
+  }
+  initDots();
+  window.addEventListener('resize', initDots);
+
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.active = true;
+  });
+  window.addEventListener('mouseleave', () => { mouse.active = false; });
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]) {
+      mouse.x = e.touches[0].clientX;
+      mouse.y = e.touches[0].clientY;
+      mouse.active = true;
+    }
+  }, { passive:true });
+  window.addEventListener('touchend', () => { mouse.active = false; });
+
+  function animate(){
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, w, h);
+
+    // aggiorna posizioni
+    for (const d of dots) {
+      d.x += d.vx;
+      d.y += d.vy;
+      if (d.x < 0) d.x = w;
+      if (d.x > w) d.x = 0;
+      if (d.y < 0) d.y = h;
+      if (d.y > h) d.y = 0;
+    }
+
+    // linee tra punti vicini
+    for (let i = 0; i < dots.length; i++) {
+      for (let j = i + 1; j < dots.length; j++) {
+        const a = dots[i], b = dots[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < LINK_DIST) {
+          const op = (1 - dist / LINK_DIST) * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(150,165,230,${op})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // linee dal mouse ai punti vicini
+    if (mouse.active) {
+      for (const d of dots) {
+        const dx = d.x - mouse.x, dy = d.y - mouse.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < MOUSE_DIST) {
+          const op = (1 - dist / MOUSE_DIST) * 0.6;
+          ctx.beginPath();
+          ctx.moveTo(d.x, d.y);
+          ctx.lineTo(mouse.x, mouse.y);
+          ctx.strokeStyle = `rgba(210,220,255,${op})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+      // punto luminoso sul cursore
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fill();
+    }
+
+    // disegna i punti
+    for (const d of dots) {
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,210,255,${d.alpha})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+
+</body>
+</html>
